@@ -1,0 +1,125 @@
+name: Main Branch PR Pipeline
+env:
+  TF_VERSION: 1.5.3
+  AWS_REGION: "us-east-1"
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    # Required permissions
+    permissions:
+      pull-requests: read
+    # Set job outputs to values from filter step
+    outputs:
+      development: ${{ steps.filter.outputs.development }}
+      uat: ${{ steps.filter.outputs.uat }}
+      production: ${{ steps.filter.outputs.production }}
+      productionfsx: ${{ steps.filter.outputs.productionfsx }}
+      network: ${{ steps.filter.outputs.network }}
+      automation: ${{ steps.filter.outputs.automation }}
+    steps:
+    # For pull requests it's not necessary to checkout the code
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          development:
+            - 'dev/**'
+          uat:
+            - 'uat/**'
+          production:
+            - 'prod/**'
+          productionfsx:
+            - 'prodfsx/**'
+          network:
+            - 'network/**'
+          automation:
+            - 'automation/**'
+
+  plan-development:
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.development == 'true' }}
+    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    with:
+      tf_version: $TF_VERSION
+      working_directory: dev
+      event_name: pull_request
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+  plan-uat:
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.uat == 'true' }}
+    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    with:
+      tf_version: $TF_VERSION
+      working_directory: uat
+      event_name: pull_request
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+  plan-productionfsx:
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.productionfsx == 'true' }}
+    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    with:
+      tf_version: $TF_VERSION
+      working_directory: prodfsx
+      event_name: pull_request
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+  plan-production:
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.production == 'true' }}
+    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    with:
+      tf_version: $TF_VERSION
+      working_directory: prod
+      event_name: pull_request
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+  plan-network:
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.network == 'true' }}
+    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    with:
+      tf_version: $TF_VERSION
+      working_directory: network
+      event_name: pull_request
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+      
+  plan-automation:
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.automation == 'true' }}
+    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    with:
+      tf_version: $TF_VERSION
+      working_directory: automation
+      event_name: pull_request
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write

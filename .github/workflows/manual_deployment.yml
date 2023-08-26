@@ -1,0 +1,57 @@
+name: Manual Deployment Pipeline
+env:
+  TF_VERSION: 1.5.3
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'The AWS Environment to deploy code to.'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - uat
+        - prod
+        - prodfsx
+        - network
+        - automation
+
+jobs:
+  validate-terraform:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_validate.yml@main
+    with:
+      tf_version: '1.5.3'
+      working_directory: ${{ inputs.environment }}
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+
+  plan-terraform:
+    needs: [validate-terraform]
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    with:
+      tf_version: '1.5.3'
+      working_directory: ${{ inputs.environment }}
+      event_name: manual
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write # Shouldn't need this, but Github doesn't let us set this dynamically so ¯\_(ツ)_/¯
+
+  apply-terraform:
+    needs: [plan-terraform]
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_apply.yml@main
+    with:
+      tf_version: '1.5.3'
+      working_directory: ${{ inputs.environment }}
+      event_name: manual
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read

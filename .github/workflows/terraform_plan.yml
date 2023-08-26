@@ -1,0 +1,132 @@
+name: zz Plan Terraform Deployment
+#env:
+#  TF_VERSION: 1.5.3
+
+on:
+  workflow_call:
+    inputs:
+      tf_version: 
+        description: 'The version of Terraform to use'
+        default: '1.5.3'
+        type: string
+      aws_region:
+        description: 'The AWS region to use by default'
+        default: 'us-east-1'
+        type: string
+      working_directory:
+        description: 'The directory to run commands in'
+        default: 'dev'
+        required: true
+        type: string
+      event_name:
+        description: 'The name of the event that called the workflow.'
+        required: false
+        type: string
+    # secrets:
+    #   git_account_token:
+    #     required: true
+    #   git_repo_token:
+    #     required: true
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ inputs.tf_version }}
+      - name: Configure AWS credentials from shared services account
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::772158751016:role/github-actions-role
+          aws-region: us-east-1
+      - name: Terraform Init
+        id: init
+        run: |
+          git config --local --remove-section http."https://github.com/"
+          git config --global url."https://foo:${ACCESS_TOKEN}@github.com/Pizza-Nova".insteadOf "https://github.com/Pizza-Nova"
+          git config --global advice.detachedHead false
+          terraform init
+        env:
+          ACCESS_TOKEN: ${{ secrets.TEMP_TOKEN }} #git_account_token }}
+          AWS_REGION: ${{ inputs.aws_region }}
+          TF_PLAN_PATH: ${{ github.workspace}}/${{inputs.working_directory}}/tfplan-${{inputs.working_directory}}
+      - name: Terraform Plan
+        id: plan
+        env:
+          AWS_REGION: ${{ inputs.aws_region }}
+        run: |
+          pwd
+          terraform plan -out=$TF_PLAN_PATH
+        continue-on-error: true
+      - name: Upload Plan Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: $TF_PLAN_PATH
+          name: tfplan-${{ inputs.working_directory }}
+      - uses: actions/github-script@v6
+        if: inputs.event_name == 'pull_request'
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} #git_repo_token }}
+          script: |
+            // 1. Retrieve existing bot comments for the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            const botComment = comments.find(comment => {
+              return comment.user.type === 'Bot' && comment.body.includes('Terraform Format and Style')
+            })
+
+            // 2. Prepare format of the comment
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            <details><summary>Validation Output</summary>
+
+            \`\`\`\n
+            ${{ steps.validate.outputs.stdout }}
+            \`\`\`
+
+            </details>
+
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ inputs.working_directory }}\`, Workflow: \`${{ github.workflow }}\`*`;
+
+            // 3. If we have a comment, update it, otherwise create a new one
+            if (botComment) {
+              github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: output
+              })
+            } else {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+              })
+            }

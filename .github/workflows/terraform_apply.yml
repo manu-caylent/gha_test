@@ -1,0 +1,65 @@
+name: zz Deploy Resources with Terraform
+#env:
+#  TF_VERSION: 1.5.3
+
+on:
+  workflow_call:
+    inputs:
+      tf_version: 
+        description: 'The version of Terraform to use'
+        default: '1.5.3'
+        type: string
+      aws_region:
+        description: 'The AWS region to use by default'
+        default: 'us-east-1'
+        type: string
+      working_directory:
+        description: 'The directory to run commands in'
+        default: 'prod'
+        required: true
+        type: string
+      event_name:
+        description: 'The name of the event that called the workflow.'
+        required: false
+        type: string
+    # secrets:
+    #   git_account_token:
+    #     required: true
+    #   git_repo_token:
+    #     required: true
+
+jobs:
+  terraform-apply:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ inputs.tf_version }}
+      - name: Configure AWS credentials from shared services account
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::772158751016:role/github-actions-role
+          aws-region: us-east-1
+      - name: Terraform Init
+        id: init
+        run: |
+          git config --local --remove-section http."https://github.com/"
+          git config --global url."https://foo:${ACCESS_TOKEN}@github.com/Pizza-Nova".insteadOf "https://github.com/Pizza-Nova"
+          git config --global advice.detachedHead false
+          terraform init
+        env:
+          ACCESS_TOKEN: ${{ secrets.TEMP_TOKEN }} #git_account_token }}
+          AWS_REGION: ${{ inputs.aws_region }}
+      - name: Terraform Apply
+        id: plan
+        env:
+          AWS_REGION: ${{ inputs.aws_region }}
+        run: terraform apply -input=false -auto-approve -no-color
