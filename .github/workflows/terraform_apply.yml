@@ -43,23 +43,4 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ inputs.tf_version }}
-      - name: Configure AWS credentials from shared services account
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::772158751016:role/github-actions-role
-          aws-region: us-east-1
-      - name: Terraform Init
-        id: init
-        run: |
-          git config --local --remove-section http."https://github.com/"
-          git config --global url."https://foo:${ACCESS_TOKEN}@github.com/Pizza-Nova".insteadOf "https://github.com/Pizza-Nova"
-          git config --global advice.detachedHead false
-          terraform init
-        env:
-          ACCESS_TOKEN: ${{ secrets.TEMP_TOKEN }} #git_account_token }}
-          AWS_REGION: ${{ inputs.aws_region }}
-      - name: Terraform Apply
-        id: plan
-        env:
-          AWS_REGION: ${{ inputs.aws_region }}
-        run: terraform apply -input=false -auto-approve -no-color
+      
