@@ -43,7 +43,7 @@ jobs:
   plan-development:
     needs: [detect-changes]
     if: ${{ needs.detect-changes.outputs.development == 'true' }}
-    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    uses: manu-caylent/gha_test/.github/workflows/terraform_plan.yml@test
     with:
       tf_version: $TF_VERSION
       working_directory: dev
@@ -57,7 +57,7 @@ jobs:
   plan-uat:
     needs: [detect-changes]
     if: ${{ needs.detect-changes.outputs.uat == 'true' }}
-    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    uses: manu-caylent/gha_test/.github/workflows/terraform_plan.yml@test
     with:
       tf_version: $TF_VERSION
       working_directory: uat
@@ -71,7 +71,7 @@ jobs:
   plan-productionfsx:
     needs: [detect-changes]
     if: ${{ needs.detect-changes.outputs.productionfsx == 'true' }}
-    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    uses: manu-caylent/gha_test/.github/workflows/terraform_plan.yml@test
     with:
       tf_version: $TF_VERSION
       working_directory: prodfsx
@@ -85,7 +85,7 @@ jobs:
   plan-production:
     needs: [detect-changes]
     if: ${{ needs.detect-changes.outputs.production == 'true' }}
-    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    uses: manu-caylent/gha_test/.github/workflows/terraform_plan.yml@test
     with:
       tf_version: $TF_VERSION
       working_directory: prod
@@ -99,7 +99,7 @@ jobs:
   plan-network:
     needs: [detect-changes]
     if: ${{ needs.detect-changes.outputs.network == 'true' }}
-    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    uses: manu-caylent/gha_test/.github/workflows/terraform_plan.yml@test
     with:
       tf_version: $TF_VERSION
       working_directory: network
@@ -113,7 +113,7 @@ jobs:
   plan-automation:
     needs: [detect-changes]
     if: ${{ needs.detect-changes.outputs.automation == 'true' }}
-    uses: Pizza-Nova/pizzanova-infra/.github/workflows/terraform_plan.yml@main
+    uses: manu-caylent/gha_test/.github/workflows/terraform_plan.yml@test
     with:
       tf_version: $TF_VERSION
       working_directory: automation
